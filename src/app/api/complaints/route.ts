@@ -29,13 +29,15 @@ export async function POST(request: NextRequest) {
   } catch { body = null; }
   const parsed = reportSchema.safeParse(body);
   if (!parsed.success) {
-    const fe = parsed.error.flatten().fieldErrors;
+    const flat = parsed.error.flatten();
+    const fe = flat.fieldErrors;
     const hints: string[] = [];
-    if (fe.title) hints.push("Title must be 4\u2013120 characters");
-    if (fe.description) hints.push("Description must be 8\u20132000 characters");
-    if (fe.address) hints.push("Address must be 3\u2013300 characters");
+    if (fe.title) hints.push("Title must be 4–120 characters");
+    if (fe.description) hints.push("Description must be 8–2000 characters");
+    if (fe.address) hints.push("Address must be 3–300 characters");
     if (fe.category) hints.push("Choose a valid category");
     if (fe.aiConsent || fe.mediaConsent) hints.push("Consent fields are required");
+    if (hints.length === 0 && flat.formErrors.length > 0) hints.push(...flat.formErrors);
     const msg = hints.length ? hints.join(". ") + "." : "Please review the report details and try again.";
     return NextResponse.json({ error: msg, details: fe }, { status: 400 });
   }
