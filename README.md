@@ -12,7 +12,8 @@ JANSETU connects resident reports to a shared municipal queue with role-separate
 - **Admin login:** `/admin/login`
 - **Admin command center:** `/admin` — server-side role checks and database RLS protect the global complaint queue.
 - **Password recovery:** `/forgot-password`
-- **Local demo:** `/demo` in development only. It uses local SQLite sample data and is not enabled in production.
+- **Local resident demo:** `/demo/resident` in development only. Submit reports and see them enter the shared local queue.
+- **Local admin demo:** `/demo` in development only. Review resident demo submissions, set status and priority, and add resolution proof. Both demo workspaces use the same local SQLite database; neither demo route is enabled in production.
 
 Without Supabase configuration, the sign-in pages remain available and explain what is missing; they do not fake a successful login. Production complaint APIs return a configuration error instead of silently writing to a machine-local database.
 

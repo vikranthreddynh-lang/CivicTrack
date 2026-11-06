@@ -9,7 +9,7 @@ const categories=["Roads","Waste","Water","Streetlights"];
 const priorityRank:Record<string,number>={Critical:0,High:1,Normal:2,Low:3};
 function updatesOf(value:ResidentComplaint["updates"]){if(Array.isArray(value))return value;try{return JSON.parse(value||"[]") as Array<{at:string;text:string;by:string}>;}catch{return [];}}
 
-export default function ResidentDashboard({name}:{name:string}) {
+export default function ResidentDashboard({name,localDemo=false}:{name:string;localDemo?:boolean}) {
   const [complaints,setComplaints]=useState<ResidentComplaint[]>([]);
   const [loading,setLoading]=useState(true);
   const [showForm,setShowForm]=useState(false);
@@ -83,7 +83,8 @@ export default function ResidentDashboard({name}:{name:string}) {
   }
   const photoArray=(item:ResidentComplaint)=>{if(Array.isArray(item.photo_urls))return item.photo_urls;try{return JSON.parse(item.photo_urls||"[]") as string[];}catch{return [];}};
 
-  return <main className="resident-page"><header className="resident-topbar"><Link href="/" className="auth-brand">JANSETU<span>·</span></Link><div><span>Signed in as {name}</span><form action="/auth/logout" method="post"><button className="signout-button">Sign out</button></form></div></header>
+  return <main className="resident-page"><header className="resident-topbar"><Link href="/" className="auth-brand">JANSETU<span>·</span></Link><div><span>{localDemo?"Demo resident · local data only":`Signed in as ${name}`}</span>{localDemo?<Link href="/demo" className="signout-button">Open admin demo</Link>:<form action="/auth/logout" method="post"><button className="signout-button">Sign out</button></form>}</div></header>
+    {localDemo&&<div className="resident-demo-notice">DEMO WORKSPACE · Reports submitted here appear in the local admin dashboard. This demo data is not shared online.</div>}
     <section className="resident-welcome"><div><span className="auth-kicker">YOUR RESIDENT WORKSPACE</span><h1>Your voice moves things forward.</h1><p>Track the teams and evidence behind every report you send.</p></div><button className="auth-submit" onClick={()=>{setError("");setShowForm(v=>!v);}}>{showForm?"Close report":"＋ Report an issue"}</button></section>
     {error&&!showForm&&<p className="auth-error" role="alert">{error}</p>}{notice&&<p className="auth-success" role="status">{notice}</p>}
     <section className="resident-metrics"><article><span>My reports</span><b>{complaints.length}</b></article><article><span>Open</span><b>{active}</b></article><article><span>Resolved</span><b>{complaints.filter(c=>c.status==="Resolved").length}</b></article><article><span>Needs attention</span><b>{escalated}</b></article></section>
