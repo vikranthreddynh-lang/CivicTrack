@@ -1,53 +1,64 @@
-# JANSETU — Civic issue reporting
+# JANSETU
 
-A local civic issue reporting prototype with resident voice intake, department suggestions, location pins, Civic Signals, a staff case queue, resident tracking, and FixProof resolution receipts. Complaint data is stored in a local SQLite database for this demo.
+**See it. Speak it. Signal it. Fix it. Prove it.**
 
-## Run locally
+JANSETU connects resident reports to a shared municipal queue with role-separated resident and administrator workspaces, automatic department and priority suggestions, private report photos, map context, resolution updates, and resident FixProof feedback.
 
-Requires Node.js 22.13+ (`node:sqlite` is used; Node 24 is recommended).
+## Login and roles
 
-```bash
+- **Resident login:** `/login`
+- **Resident signup:** `/signup` — public signup can only create a resident account.
+- **Resident dashboard:** `/resident` — the signed-in resident sees only their own complaints, updates, and photos.
+- **Admin login:** `/admin/login`
+- **Admin command center:** `/admin` — server-side role checks and database RLS protect the global complaint queue.
+- **Password recovery:** `/forgot-password`
+- **Local demo:** `/demo` in development only. It uses local SQLite sample data and is not enabled in production.
+
+Without Supabase configuration, the sign-in pages remain available and explain what is missing; they do not fake a successful login. Production complaint APIs return a configuration error instead of silently writing to a machine-local database.
+
+## Local development
+
+Requires Node.js 22.13+ (`node:sqlite` is used for the local demo; Node 24 is recommended).
+
+```powershell
+Copy-Item .env.example .env.local
 npm install
 npm run dev
 ```
 
-On PowerShell, run `Copy-Item .env.example .env.local` first if you want to configure optional services. On macOS or Linux, use `cp .env.example .env.local`.
+Open [http://localhost:3000](http://localhost:3000). With no Supabase keys, use **Open local demo dashboard** on the home page. The local demo creates `data/poya.sqlite` with sample records. The file is gitignored and remains local.
 
-Open [http://localhost:3000](http://localhost:3000). The SQLite database is created at `data/poya.sqlite` and seeded with demo reports on first run. Remove that file to reset the local demo.
+## Supabase production setup
 
-## Demo workflows
+1. Create a Supabase project and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in local `.env.local` and your Vercel project. The legacy anon key variable is also supported.
+2. Apply [`supabase/migrations/202611060001_init_jansetu.sql`](supabase/migrations/202611060001_init_jansetu.sql) in the Supabase SQL Editor. It creates resident profiles and roles, complaints, audit/update tables, RLS policies, the private photo bucket, and the resident resolution-feedback function.
+3. In Supabase Auth URL configuration, set the production Site URL and add both local and production `/auth/callback` URLs to the redirect allowlist.
+4. Configure custom SMTP in Supabase Auth so confirmation, reset, and admin invitation emails can be delivered.
+5. Create the first trusted staff account through `/signup`, then run [`supabase/bootstrap-first-admin.sql`](supabase/bootstrap-first-admin.sql) in the SQL Editor after replacing its placeholder email. This trusted one-time script is the only bootstrap path; public signup always creates resident access.
+6. Set `SUPABASE_SERVICE_ROLE_KEY` only as a server-side environment secret if admins need to invite or revoke other administrators. Never add it to a `NEXT_PUBLIC_` variable or commit it.
 
-- **Resident:** choose **New report**, record a voice note, review or edit the transcript, optionally request and review a Gemini suggestion, set the issue location, and submit. A tracking code opens after successful save.
-- **Staff:** open a report from **Latest reports**, change its status, add a crew update, and attach FixProof evidence.
-- **Civic Signal:** create another same-category report within 600 m of an existing issue. Nearby reports group into a shared signal.
-- **Resident confirmation:** use **Track a report** or a report detail to confirm a resolved fix or reopen it as still broken.
+Supabase RLS lets residents read and create only their own complaints; admins can access the global queue. Admin invitation acceptance checks the signed-in email against an unexpired pending invitation before assigning the admin role. Complaint photos are stored in a private bucket and returned to authorized viewers as expiring signed URLs.
 
-## Optional integrations
+## Optional services
 
-Copy `.env.example` to `.env.local`, fill in the keys you want, and restart the dev server. Leaving either key blank does not disable the app.
+- **Google Maps:** Set `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and optionally `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`. Enable Maps JavaScript API and billing in Google Cloud, then restrict the browser key by allowed referrers and API. When the key is absent or the map fails, JANSETU shows an OpenStreetMap preview; address search and current location are independent of Google Maps. Google Maps usage may be billed. See [Google Maps setup](https://developers.google.com/maps/documentation/javascript/get-api-key).
+- **Gemini:** Set `GEMINI_API_KEY` and optionally `GEMINI_MODEL` (`gemini-3.8-flash` by default). The key is server-only. Residents can request, review, and apply title/category suggestions. The deterministic server priority rules and admin review remain active if Gemini is unavailable. Review [Gemini pricing and data-use terms](https://ai.google.dev/gemini-api/docs/pricing).
+- **Voice transcription:** `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` enable Cloudflare Whisper. Browser speech recognition and editable text remain as fallbacks.
+- **Address search:** Uses OpenStreetMap Nominatim and does not need the Google Maps key.
 
-### Google Maps JavaScript API
+## Priority handling
 
-- Enable the **Maps JavaScript API** in a Google Cloud project and configure billing.
-- Set `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`. This is a browser key by design; restrict it to the app's HTTP referrers and only the APIs needed.
-- Optionally set `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` for a Cloud-styled map. The app also works without a map ID.
-- JANSETU uses interactive maps with issue markers and draggable/clickable report pins when available. Without a key, or if the API fails to load or authorize, it shows an OpenStreetMap preview and keeps address search, current location, and Google Maps links available.
-- Google Maps usage may be billed according to the selected project and current Maps Platform pricing. See [Maps JavaScript API setup](https://developers.google.com/maps/documentation/javascript/get-api-key).
+New complaints receive a server-side priority recommendation. Explicit immediate safety hazards can become **Critical**; other hazard terms become **High**. Nearby unresolved reports of the same category can raise a normal issue to **High**, but duplicate count alone cannot make an issue Critical. The admin queue defaults to Critical → High → Normal → Low, with status/priority filters and newest/oldest sort options. An admin can override priority only with a recorded reason.
 
-### Gemini complaint suggestions
+## Deploy to Vercel
 
-- Create an API key in Google AI Studio and set `GEMINI_API_KEY` on the server. Keep this variable private; do not prefix it with `NEXT_PUBLIC_` or commit it.
-- `GEMINI_MODEL` is optional and defaults to `gemini-3.8-flash`; change it to a model enabled for your API project if needed.
-- Gemini proposes a title, summary, category, department, and priority. Residents review and apply suggestions; the supported category-to-department mapping is checked before returning. AI does not decide jurisdiction. The report description is sent to Google only when the resident requests an AI suggestion.
-- Without a key, on provider error, or when output validation fails, the existing local keyword classifier and editable form remain available. Reports can still be submitted.
-- The endpoint limits input size and applies a lightweight per-process request limit. Production deployments should add durable rate limiting and user authentication before exposing a paid AI key publicly.
-- Review [Gemini API pricing and data-use terms](https://ai.google.dev/gemini-api/docs/pricing) for the tier you choose.
+1. Import `vikranthreddynh-lang/CivicTrack` into Vercel.
+2. Select Node.js 22 and configure Supabase environment variables for Production, Preview, and Development as appropriate. Add `SUPABASE_SERVICE_ROLE_KEY` only as a server secret. Add optional map, Gemini, and Cloudflare variables only if those features are enabled.
+3. Apply the Supabase migration, configure Auth URLs and SMTP, and bootstrap the first admin before inviting staff.
+4. Deploy and verify resident signup/login, admin login, RLS ownership, report/photo persistence, priority queue ordering, and password-reset/invitation emails against the connected project.
 
-### Voice and location fallbacks
+The repo is deployment-ready, but no public website URL exists until a Vercel project is connected and a deployment completes successfully. Do not put service-role keys or API secrets in GitHub.
 
-- `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` enable Cloudflare Workers AI Whisper transcription. Without them, browser speech recognition works where available and the transcript remains editable.
-- Address pin search uses OpenStreetMap Nominatim. It is independent of the Google Maps key; current location uses browser geolocation. If no address can be geocoded, the resident can use current location or select a point on Google Maps when configured.
+## Current boundaries
 
-## Local demo limitations
-
-This is a hackathon prototype, not a deployed municipal service. Complaint storage uses local SQLite and is not shared across deployments. Authentication and production security controls are not included in this demo build.
+The production backend is Supabase when configured. SQLite remains only for the explicit local demo. Jurisdiction boundaries, municipal authority contacts, and service deadlines are not fabricated or configured by this starter; deployments must add verified city data and policies before presenting them as official routing or SLA results.

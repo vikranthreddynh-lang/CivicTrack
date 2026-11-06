@@ -21,6 +21,7 @@ export type Complaint = {
   evidence: string | null;
   resident_feedback: string | null;
   signal_id: string | null;
+  photo_urls: string;
 };
 
 const dataDir = path.join(process.cwd(), "data");
@@ -50,9 +51,13 @@ function getDatabase(): DatabaseSync {
     updates TEXT NOT NULL DEFAULT '[]',
     evidence TEXT,
     resident_feedback TEXT,
-    signal_id TEXT
+    signal_id TEXT,
+    photo_urls TEXT NOT NULL DEFAULT '[]'
   );
 `);
+
+  const columns = db.prepare("PRAGMA table_info(complaints)").all() as { name:string }[];
+  if (!columns.some(column => column.name === "photo_urls")) db.exec("ALTER TABLE complaints ADD COLUMN photo_urls TEXT NOT NULL DEFAULT '[]'");
 
   const count = db.prepare("SELECT COUNT(*) AS n FROM complaints").get() as { n: number };
   if (count.n === 0) {
@@ -85,7 +90,7 @@ export function listComplaints(): Complaint[] {
   return db.prepare("SELECT * FROM complaints ORDER BY created_at DESC").all() as Complaint[];
 }
 
-export function addComplaint(input: Omit<Complaint, "id" | "created_at" | "updated_at" | "updates" | "evidence" | "resident_feedback" | "signal_id">) {
+export function addComplaint(input: Omit<Complaint, "id" | "code" | "status" | "created_at" | "updated_at" | "updates" | "evidence" | "resident_feedback" | "signal_id" | "photo_urls"> & { photo_urls?:string }) {
   const db = getDatabase();
   const now = new Date().toISOString();
   const similar = db.prepare("SELECT code,signal_id,lat,lng FROM complaints WHERE category = ?").all(input.category) as { code:string; signal_id:string|null; lat:number; lng:number }[];
@@ -97,16 +102,16 @@ export function addComplaint(input: Omit<Complaint, "id" | "created_at" | "updat
     for (const item of near) if (item.signal_id !== signalId) db.prepare("UPDATE complaints SET signal_id = ? WHERE code = ?").run(signalId,item.code);
   }
   const dupeCount = signalId ? (db.prepare("SELECT COUNT(*) AS n FROM complaints WHERE signal_id = ?").get(signalId) as {n:number}).n : 0;
-  const priority = dupeCount >= 3 ? "Critical" : dupeCount >= 1 ? "High" : input.priority;
+  const priority = input.priority === "Normal" && dupeCount >= 2 ? "High" : input.priority;
   const code = `PY-${Math.floor(2100 + Math.random() * 7800)}`;
   const updates = [{ at: now, text: `Complaint received and routed to ${input.department}.`, by: "Poya AI triage" }];
   const result = db.prepare(`INSERT INTO complaints
-    (code,title,description,category,department,status,priority,location,lat,lng,created_at,updated_at,reporter,updates,signal_id)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(code,input.title,input.description,input.category,input.department,"Received",priority,input.location,input.lat,input.lng,now,now,input.reporter,JSON.stringify(updates),signalId);
+    (code,title,description,category,department,status,priority,location,lat,lng,created_at,updated_at,reporter,updates,signal_id,photo_urls)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(code,input.title,input.description,input.category,input.department,"Received",priority,input.location,input.lat,input.lng,now,now,input.reporter,JSON.stringify(updates),signalId,input.photo_urls??"[]");
   return db.prepare("SELECT * FROM complaints WHERE id = ?").get(Number(result.lastInsertRowid)) as Complaint;
 }
 
-export function updateComplaint(code: string, body: { status?: string; note?: string; evidence?: string; feedback?: string }) {
+export function updateComplaint(code: string, body: { status?: string; note?: string; evidence?: string; feedback?: string; priority?:string; priorityReason?:string }) {
   const db = getDatabase();
   const existing = db.prepare("SELECT * FROM complaints WHERE code = ?").get(code) as Complaint | undefined;
   if (!existing) return null;
@@ -114,10 +119,11 @@ export function updateComplaint(code: string, body: { status?: string; note?: st
   let updates = JSON.parse(existing.updates) as { at:string; text:string; by:string }[];
   if (body.status && body.status !== existing.status) updates = [...updates, { at: now, text: `Status updated to ${body.status}.`, by: existing.department }];
   if (body.note) updates = [...updates, { at: now, text: body.note, by: existing.department }];
+  if (body.priority && body.priority !== existing.priority) updates = [...updates, { at: now, text: `Priority changed from ${existing.priority} to ${body.priority}: ${body.priorityReason?.trim() || "Staff review"}`, by: existing.department }];
   if (body.evidence) updates = [...updates, { at: now, text: "FixProof evidence added for resident review.", by: existing.department }];
   if (body.feedback) updates = [...updates, { at: now, text: body.feedback === "fixed" ? "Resident confirmed the fix worked." : "Resident reported the issue is still present; case reopened.", by: "Resident" }];
   const status = body.feedback === "still_broken" ? "In progress" : body.status ?? existing.status;
-  db.prepare(`UPDATE complaints SET status=?, updated_at=?, updates=?, evidence=COALESCE(?,evidence), resident_feedback=COALESCE(?,resident_feedback) WHERE code=?`)
-    .run(status, now, JSON.stringify(updates), body.evidence ?? null, body.feedback ?? null, code);
+  db.prepare(`UPDATE complaints SET status=?, priority=?, updated_at=?, updates=?, evidence=COALESCE(?,evidence), resident_feedback=COALESCE(?,resident_feedback) WHERE code=?`)
+    .run(status, body.priority ?? existing.priority, now, JSON.stringify(updates), body.evidence ?? null, body.feedback ?? null, code);
   return db.prepare("SELECT * FROM complaints WHERE code = ?").get(code) as Complaint;
 }
