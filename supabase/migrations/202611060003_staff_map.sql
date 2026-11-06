@@ -13,6 +13,7 @@ begin
   end if;
 end $$;
 
+drop policy if exists "staff read private complaint media objects" on storage.objects;
 create policy "staff read private complaint media objects" on storage.objects for select to authenticated using (
   bucket_id='complaint-originals' and exists (
     select 1 from public.complaint_media m join public.complaints c on c.id=m.complaint_id

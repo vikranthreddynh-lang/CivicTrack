@@ -3,6 +3,7 @@ begin
   if new.ai_consent then insert into public.ai_processing_jobs(complaint_id,status,task_types) values(new.id,'queued',array['language_detection','translation','classification']); end if;
   return new;
 end $$;
+drop trigger if exists complaint_enqueue_ai on public.complaints;
 create trigger complaint_enqueue_ai after insert on public.complaints for each row execute function public.enqueue_ai_processing_job();
 
 create or replace function public.resolve_jurisdiction(p_lat double precision,p_lng double precision,p_category text)
@@ -59,33 +60,58 @@ begin
   return result;
 end $$;
 
+drop policy if exists "admins append audit events" on public.audit_logs;
 create policy "admins append audit events" on public.audit_logs for insert to authenticated with check (actor_id=auth.uid() and public.current_user_role() in ('super_admin','department_admin','ward_admin'));
+
+drop policy if exists "admins append escalation events" on public.escalation_events;
 create policy "admins append escalation events" on public.escalation_events for insert to authenticated with check (public.current_user_role() in ('super_admin','department_admin','ward_admin') and exists(select 1 from public.complaints c where c.id=complaint_id));
+
 create or replace function public.current_user_department_id() returns uuid language sql stable security definer set search_path=public as $$ select department_id from public.profiles where id=auth.uid() $$;
+
+drop policy if exists "admins list scoped workers" on public.profiles;
 create policy "admins list scoped workers" on public.profiles for select to authenticated using (public.current_user_role()='super_admin' or (public.current_user_role()='department_admin' and department_id=public.current_user_department_id() and role='field_worker'));
+
+drop policy if exists "staff upload assigned resolution photos" on storage.objects;
 create policy "staff upload assigned resolution photos" on storage.objects for insert to authenticated with check (
   bucket_id='complaint-originals' and exists(select 1 from public.complaints c where c.id::text=(storage.foldername(name))[1] and (public.current_user_role() in ('super_admin','department_admin') or (public.current_user_role()='field_worker' and c.assigned_to=auth.uid())))
 );
+
+drop policy if exists "staff append public status history" on public.complaint_status_history;
 create policy "staff append public status history" on public.complaint_status_history for insert to authenticated with check (actor_id=auth.uid() and public.can_manage_complaints());
+
+drop policy if exists "assigned worker update own complaint" on public.complaints;
 create policy "assigned worker update own complaint" on public.complaints for update to authenticated using (public.current_user_role()='field_worker' and assigned_to=auth.uid()) with check (public.current_user_role()='field_worker' and assigned_to=auth.uid());
-drop policy "staff update authorized complaints" on public.complaints;
+
+drop policy if exists "staff update authorized complaints" on public.complaints;
 create policy "staff update authorized complaints" on public.complaints for update to authenticated
 using (public.current_user_role()='super_admin' or (public.current_user_role()='department_admin' and department_id=(select department_id from public.profiles where id=auth.uid())) or (public.current_user_role()='ward_admin' and ward_id=(select ward_id from public.profiles where id=auth.uid())))
 with check (public.current_user_role()='super_admin' or (public.current_user_role()='department_admin' and department_id=(select department_id from public.profiles where id=auth.uid())) or (public.current_user_role()='ward_admin' and ward_id=(select ward_id from public.profiles where id=auth.uid())));
-create table public.complaint_internal_notes(id uuid primary key default gen_random_uuid(),complaint_id uuid not null references public.complaints(id) on delete cascade,author_id uuid not null references public.profiles(id),note text not null check(length(note)<=2000),created_at timestamptz not null default now());
+
+create table if not exists public.complaint_internal_notes(id uuid primary key default gen_random_uuid(),complaint_id uuid not null references public.complaints(id) on delete cascade,author_id uuid not null references public.profiles(id),note text not null check(length(note)<=2000),created_at timestamptz not null default now());
 alter table public.complaint_internal_notes enable row level security;
+
+drop policy if exists "staff read authorized internal notes" on public.complaint_internal_notes;
 create policy "staff read authorized internal notes" on public.complaint_internal_notes for select to authenticated using (exists(select 1 from public.complaints c where c.id=complaint_id));
+
+drop policy if exists "authorized staff add internal notes" on public.complaint_internal_notes;
 create policy "authorized staff add internal notes" on public.complaint_internal_notes for insert to authenticated with check (author_id=auth.uid() and public.current_user_role() in ('super_admin','department_admin','ward_admin','field_worker') and exists(select 1 from public.complaints c where c.id=complaint_id));
+
+drop policy if exists "admins assign complaints" on public.complaint_assignments;
 create policy "admins assign complaints" on public.complaint_assignments for insert to authenticated with check (assigned_by=auth.uid() and public.current_user_role() in ('super_admin','department_admin','ward_admin') and exists(select 1 from public.complaints c where c.id=complaint_id));
+
+drop policy if exists "workers add resolution evidence" on public.resolution_evidence;
 create policy "workers add resolution evidence" on public.resolution_evidence for insert to authenticated with check (worker_id=auth.uid() and public.current_user_role() in ('super_admin','department_admin','field_worker') and exists(select 1 from public.complaints c where c.id=complaint_id));
+
+drop policy if exists "staff read resolution media objects" on storage.objects;
 create policy "staff read resolution media objects" on storage.objects for select to authenticated using (
   bucket_id='complaint-originals' and exists (
     select 1 from public.resolution_evidence e join public.complaints c on c.id=e.complaint_id
     where e.object_path=name and c.id::text=(storage.foldername(name))[1]
   )
 );
-alter table public.complaints add column first_response_at timestamptz;
-alter table public.complaints add column sla_response_due_at timestamptz;
-alter table public.complaints add column sla_resolution_due_at timestamptz;
-alter table public.complaints add column sla_assignment_due_at timestamptz;
-alter table public.complaints add column escalation_level integer not null default 0;
+
+alter table public.complaints add column if not exists first_response_at timestamptz;
+alter table public.complaints add column if not exists sla_response_due_at timestamptz;
+alter table public.complaints add column if not exists sla_resolution_due_at timestamptz;
+alter table public.complaints add column if not exists sla_assignment_due_at timestamptz;
+alter table public.complaints add column if not exists escalation_level integer not null default 0;

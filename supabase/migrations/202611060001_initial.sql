@@ -2,11 +2,19 @@
 create extension if not exists pgcrypto;
 create extension if not exists postgis with schema extensions;
 
-create type public.user_role as enum ('super_admin','department_admin','ward_admin','field_worker','auditor');
-create type public.complaint_status as enum ('new','assigned','accepted','in_progress','work_completed','awaiting_verification','verified','closed','reopened');
-create type public.processing_status as enum ('queued','processing','completed','failed','manual_review','not_consented');
+do $$ begin
+  create type public.user_role as enum ('super_admin','department_admin','ward_admin','field_worker','auditor');
+exception when duplicate_object then null; end $$;
 
-create table public.profiles (
+do $$ begin
+  create type public.complaint_status as enum ('new','assigned','accepted','in_progress','work_completed','awaiting_verification','verified','closed','reopened');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create type public.processing_status as enum ('queued','processing','completed','failed','manual_review','not_consented');
+exception when duplicate_object then null; end $$;
+
+create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text not null default '',
   role public.user_role not null default 'auditor',
@@ -14,13 +22,19 @@ create table public.profiles (
   ward_id uuid,
   created_at timestamptz not null default now()
 );
-create table public.departments (id uuid primary key default gen_random_uuid(), name text not null unique, active boolean not null default true, created_at timestamptz not null default now());
-create table public.wards (id uuid primary key default gen_random_uuid(), name text not null, ward_code text unique, municipality text not null default 'Unconfigured municipality', boundary extensions.geometry(MultiPolygon,4326), created_at timestamptz not null default now());
-create table public.jurisdictions (id uuid primary key default gen_random_uuid(), ward_id uuid references public.wards(id), department_id uuid references public.departments(id), service_category text not null, boundary extensions.geometry(MultiPolygon,4326), source text, source_date date, coverage_percent numeric(5,2), active boolean not null default true, created_at timestamptz not null default now());
-alter table public.profiles add constraint profiles_department_fk foreign key (department_id) references public.departments(id);
-alter table public.profiles add constraint profiles_ward_fk foreign key (ward_id) references public.wards(id);
+create table if not exists public.departments (id uuid primary key default gen_random_uuid(), name text not null unique, active boolean not null default true, created_at timestamptz not null default now());
+create table if not exists public.wards (id uuid primary key default gen_random_uuid(), name text not null, ward_code text unique, municipality text not null default 'Unconfigured municipality', boundary extensions.geometry(MultiPolygon,4326), created_at timestamptz not null default now());
+create table if not exists public.jurisdictions (id uuid primary key default gen_random_uuid(), ward_id uuid references public.wards(id), department_id uuid references public.departments(id), service_category text not null, boundary extensions.geometry(MultiPolygon,4326), source text, source_date date, coverage_percent numeric(5,2), active boolean not null default true, created_at timestamptz not null default now());
 
-create table public.complaints (
+do $$ begin
+  alter table public.profiles add constraint profiles_department_fk foreign key (department_id) references public.departments(id);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  alter table public.profiles add constraint profiles_ward_fk foreign key (ward_id) references public.wards(id);
+exception when duplicate_object then null; end $$;
+
+create table if not exists public.complaints (
   id uuid primary key default gen_random_uuid(),
   tracking_code_hash text not null unique check (length(tracking_code_hash)=64),
   title text not null check (length(title) between 4 and 120),
@@ -55,18 +69,19 @@ create table public.complaints (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create index complaints_location_gix on public.complaints using gist(location);
-create index complaints_status_created_idx on public.complaints(status, created_at desc);
-create index complaints_department_idx on public.complaints(department_id, status);
-create index complaints_category_created_idx on public.complaints(category, created_at desc);
-create index complaints_processing_idx on public.complaints(processing_status, created_at desc);
+create index if not exists complaints_location_gix on public.complaints using gist(location);
+create index if not exists complaints_status_created_idx on public.complaints(status, created_at desc);
+create index if not exists complaints_department_idx on public.complaints(department_id, status);
+create index if not exists complaints_category_created_idx on public.complaints(category, created_at desc);
+create index if not exists complaints_processing_idx on public.complaints(processing_status, created_at desc);
 
-create table public.complaint_transcriptions (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, original_text text not null, original_language text, english_translation text, edited_by_resident boolean not null default false, created_at timestamptz not null default now());
-create table public.complaint_media (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, original_name text not null, object_path text not null unique, public_redacted_path text, mime_type text not null, byte_size bigint not null check(byte_size between 0 and 10000000), consented_for_analysis boolean not null default false, processing_status text not null default 'stored', created_at timestamptz not null default now());
-create table public.complaint_status_history (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, status public.complaint_status not null, public_note text, actor_id uuid references public.profiles(id), created_at timestamptz not null default now());
-create table public.complaint_assignments (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, department_id uuid references public.departments(id), worker_id uuid references public.profiles(id), assigned_by uuid references public.profiles(id), rationale text, created_at timestamptz not null default now());
-create table public.ai_processing_jobs (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, status text not null default 'queued' check(status in ('queued','processing','completed','retrying','failed')), attempts integer not null default 0, max_attempts integer not null default 5, next_attempt_at timestamptz not null default now(), task_types text[] not null default '{}', last_error text, locked_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
-create index ai_jobs_ready_idx on public.ai_processing_jobs(next_attempt_at) where status in ('queued','retrying');
+create table if not exists public.complaint_transcriptions (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, original_text text not null, original_language text, english_translation text, edited_by_resident boolean not null default false, created_at timestamptz not null default now());
+create table if not exists public.complaint_media (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, original_name text not null, object_path text not null unique, public_redacted_path text, mime_type text not null, byte_size bigint not null check(byte_size between 0 and 10000000), consented_for_analysis boolean not null default false, processing_status text not null default 'stored', created_at timestamptz not null default now());
+create table if not exists public.complaint_status_history (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, status public.complaint_status not null, public_note text, actor_id uuid references public.profiles(id), created_at timestamptz not null default now());
+create table if not exists public.complaint_assignments (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, department_id uuid references public.departments(id), worker_id uuid references public.profiles(id), assigned_by uuid references public.profiles(id), rationale text, created_at timestamptz not null default now());
+create table if not exists public.ai_processing_jobs (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, status text not null default 'queued' check(status in ('queued','processing','completed','retrying','failed')), attempts integer not null default 0, max_attempts integer not null default 5, next_attempt_at timestamptz not null default now(), task_types text[] not null default '{}', last_error text, locked_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+create index if not exists ai_jobs_ready_idx on public.ai_processing_jobs(next_attempt_at) where status in ('queued','retrying');
+
 create or replace function public.enqueue_ai_processing_job() returns trigger language plpgsql security definer set search_path=public as $$
 begin
   if new.ai_consent then
@@ -74,7 +89,9 @@ begin
   end if;
   return new;
 end $$;
+drop trigger if exists complaint_enqueue_ai on public.complaints;
 create trigger complaint_enqueue_ai after insert on public.complaints for each row execute function public.enqueue_ai_processing_job();
+
 create or replace function public.claim_ai_processing_jobs(batch_size integer default 3)
 returns table(job_id uuid, complaint_id uuid, attempts integer, task_types text[])
 language sql security definer set search_path=public as $$
@@ -84,19 +101,21 @@ language sql security definer set search_path=public as $$
 $$;
 revoke all on function public.claim_ai_processing_jobs(integer) from public,anon,authenticated;
 grant execute on function public.claim_ai_processing_jobs(integer) to service_role;
-create table public.recurrence_flags (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, related_count integer not null default 0, radius_m integer not null, window_days integer not null, explanation text not null, reviewed_by uuid references public.profiles(id), reviewed_at timestamptz, created_at timestamptz not null default now(), unique(complaint_id));
-create table public.dataset_catalog (id uuid primary key default gen_random_uuid(), dataset_key text not null unique, title text not null, source text not null, source_date date, coverage geography(MultiPolygon,4326), coverage_percent numeric(5,2), last_checked_at timestamptz not null default now(), notes text, active boolean not null default true);
-create table public.infrastructure_assets (id uuid primary key default gen_random_uuid(), asset_type text not null, label text not null, location extensions.geometry(Point,4326) not null, dataset_id uuid references public.dataset_catalog(id), attributes jsonb not null default '{}'::jsonb);
-create index assets_location_gix on public.infrastructure_assets using gist(location);
-create table public.sla_policies (id uuid primary key default gen_random_uuid(), category text not null, priority text not null, assignment_hours integer not null, response_hours integer not null, resolution_hours integer not null, active boolean not null default true, unique(category, priority));
-create table public.escalation_events (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, event_type text not null, details jsonb not null default '{}'::jsonb, created_at timestamptz not null default now());
-create table public.resolution_evidence (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, worker_id uuid references public.profiles(id), object_path text not null, note text, submitted_at timestamptz not null default now());
-create table public.resident_feedback (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, outcome text not null check(outcome in ('confirmed','disputed')), note text, created_at timestamptz not null default now());
-create table public.audit_logs (id uuid primary key default gen_random_uuid(), actor_id uuid references public.profiles(id), action text not null, entity_type text not null, entity_id uuid, reason text, metadata jsonb not null default '{}'::jsonb, created_at timestamptz not null default now());
-create table public.system_settings (key text primary key, value jsonb not null, updated_at timestamptz not null default now());
+
+create table if not exists public.recurrence_flags (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, related_count integer not null default 0, radius_m integer not null, window_days integer not null, explanation text not null, reviewed_by uuid references public.profiles(id), reviewed_at timestamptz, created_at timestamptz not null default now(), unique(complaint_id));
+create table if not exists public.dataset_catalog (id uuid primary key default gen_random_uuid(), dataset_key text not null unique, title text not null, source text not null, source_date date, coverage geography(MultiPolygon,4326), coverage_percent numeric(5,2), last_checked_at timestamptz not null default now(), notes text, active boolean not null default true);
+create table if not exists public.infrastructure_assets (id uuid primary key default gen_random_uuid(), asset_type text not null, label text not null, location extensions.geometry(Point,4326) not null, dataset_id uuid references public.dataset_catalog(id), attributes jsonb not null default '{}'::jsonb);
+create index if not exists assets_location_gix on public.infrastructure_assets using gist(location);
+create table if not exists public.sla_policies (id uuid primary key default gen_random_uuid(), category text not null, priority text not null, assignment_hours integer not null, response_hours integer not null, resolution_hours integer not null, active boolean not null default true, unique(category, priority));
+create table if not exists public.escalation_events (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, event_type text not null, details jsonb not null default '{}'::jsonb, created_at timestamptz not null default now());
+create table if not exists public.resolution_evidence (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, worker_id uuid references public.profiles(id), object_path text not null, note text, submitted_at timestamptz not null default now());
+create table if not exists public.resident_feedback (id uuid primary key default gen_random_uuid(), complaint_id uuid not null references public.complaints(id) on delete cascade, outcome text not null check(outcome in ('confirmed','disputed')), note text, created_at timestamptz not null default now());
+create table if not exists public.audit_logs (id uuid primary key default gen_random_uuid(), actor_id uuid references public.profiles(id), action text not null, entity_type text not null, entity_id uuid, reason text, metadata jsonb not null default '{}'::jsonb, created_at timestamptz not null default now());
+create table if not exists public.system_settings (key text primary key, value jsonb not null, updated_at timestamptz not null default now());
 
 create or replace function public.current_user_role() returns public.user_role language sql stable security definer set search_path=public as $$ select role from public.profiles where id=auth.uid() $$;
 create or replace function public.can_manage_complaints() returns boolean language sql stable security definer set search_path=public as $$ select coalesce(public.current_user_role() in ('super_admin','department_admin','ward_admin','field_worker','auditor'), false) $$;
+
 create or replace function public.public_track_complaint(code_hash text) returns jsonb language plpgsql stable security definer set search_path=public,extensions as $$
 declare result jsonb;
 begin
@@ -127,26 +146,67 @@ alter table public.resident_feedback enable row level security;
 alter table public.audit_logs enable row level security;
 alter table public.system_settings enable row level security;
 
+drop policy if exists "staff read own profile" on public.profiles;
 create policy "staff read own profile" on public.profiles for select to authenticated using (id=auth.uid() or public.current_user_role()='super_admin');
+
+drop policy if exists "staff read department catalog" on public.departments;
 create policy "staff read department catalog" on public.departments for select to authenticated using (public.can_manage_complaints());
+
+drop policy if exists "staff read wards" on public.wards;
 create policy "staff read wards" on public.wards for select to authenticated using (public.can_manage_complaints());
+
+drop policy if exists "staff read jurisdictions" on public.jurisdictions;
 create policy "staff read jurisdictions" on public.jurisdictions for select to authenticated using (public.can_manage_complaints());
+
+drop policy if exists "staff read complaints" on public.complaints;
 create policy "staff read complaints" on public.complaints for select to authenticated using (public.current_user_role()='super_admin' or (public.current_user_role()='department_admin' and department_id=(select department_id from public.profiles where id=auth.uid())) or (public.current_user_role()='ward_admin' and ward_id=(select ward_id from public.profiles where id=auth.uid())) or (public.current_user_role()='field_worker' and assigned_to=auth.uid()) or public.current_user_role()='auditor');
+
+drop policy if exists "staff read transcription" on public.complaint_transcriptions;
 create policy "staff read transcription" on public.complaint_transcriptions for select to authenticated using (exists(select 1 from public.complaints c where c.id=complaint_id));
+
+drop policy if exists "staff read private media" on public.complaint_media;
 create policy "staff read private media" on public.complaint_media for select to authenticated using (exists(select 1 from public.complaints c where c.id=complaint_id));
+
+drop policy if exists "staff read history" on public.complaint_status_history;
 create policy "staff read history" on public.complaint_status_history for select to authenticated using (exists(select 1 from public.complaints c where c.id=complaint_id));
+
+drop policy if exists "staff update authorized complaints" on public.complaints;
 create policy "staff update authorized complaints" on public.complaints for update to authenticated using (public.current_user_role() in ('super_admin','department_admin','ward_admin')) with check (public.current_user_role() in ('super_admin','department_admin','ward_admin'));
+
+drop policy if exists "staff read assignments" on public.complaint_assignments;
 create policy "staff read assignments" on public.complaint_assignments for select to authenticated using (public.can_manage_complaints());
+
+drop policy if exists "staff read jobs" on public.ai_processing_jobs;
 create policy "staff read jobs" on public.ai_processing_jobs for select to authenticated using (public.current_user_role() in ('super_admin','department_admin'));
+
+drop policy if exists "staff update jobs" on public.ai_processing_jobs;
 create policy "staff update jobs" on public.ai_processing_jobs for update to authenticated using (public.current_user_role() in ('super_admin','department_admin')) with check (public.current_user_role() in ('super_admin','department_admin'));
+
+drop policy if exists "staff read recurrence" on public.recurrence_flags;
 create policy "staff read recurrence" on public.recurrence_flags for select to authenticated using (public.can_manage_complaints());
+
+drop policy if exists "staff read datasets" on public.dataset_catalog;
 create policy "staff read datasets" on public.dataset_catalog for select to authenticated using (public.can_manage_complaints());
+
+drop policy if exists "staff read assets" on public.infrastructure_assets;
 create policy "staff read assets" on public.infrastructure_assets for select to authenticated using (public.can_manage_complaints());
+
+drop policy if exists "staff read sla" on public.sla_policies;
 create policy "staff read sla" on public.sla_policies for select to authenticated using (public.can_manage_complaints());
+
+drop policy if exists "staff read escalations" on public.escalation_events;
 create policy "staff read escalations" on public.escalation_events for select to authenticated using (public.can_manage_complaints());
+
+drop policy if exists "staff read resolution evidence" on public.resolution_evidence;
 create policy "staff read resolution evidence" on public.resolution_evidence for select to authenticated using (exists(select 1 from public.complaints c where c.id=complaint_id));
+
+drop policy if exists "staff read feedback" on public.resident_feedback;
 create policy "staff read feedback" on public.resident_feedback for select to authenticated using (public.current_user_role() in ('super_admin','department_admin','ward_admin','auditor'));
+
+drop policy if exists "super admin read audit" on public.audit_logs;
 create policy "super admin read audit" on public.audit_logs for select to authenticated using (public.current_user_role()='super_admin' or public.current_user_role()='auditor');
+
+drop policy if exists "super admin manage settings" on public.system_settings;
 create policy "super admin manage settings" on public.system_settings for all to authenticated using (public.current_user_role()='super_admin') with check (public.current_user_role()='super_admin');
 
 insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values
@@ -159,8 +219,9 @@ insert into public.system_settings(key,value) values
 ('privacy_policy', '{"retention_days":365,"delete_after_days":365,"public_media_requires_redaction":true,"ai_processing_consent_required":true}'::jsonb)
 on conflict(key) do nothing;
 
-create table public.api_rate_limits (key_hash text primary key check(length(key_hash)=64), window_started_at timestamptz not null, request_count integer not null default 0);
+create table if not exists public.api_rate_limits (key_hash text primary key check(length(key_hash)=64), window_started_at timestamptz not null, request_count integer not null default 0);
 alter table public.api_rate_limits enable row level security;
+
 create or replace function public.consume_api_rate_limit(p_key_hash text, p_limit integer, p_window_seconds integer)
 returns boolean language plpgsql security definer set search_path=public as $$
 declare n integer;
