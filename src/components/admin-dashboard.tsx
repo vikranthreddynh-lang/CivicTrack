@@ -46,7 +46,7 @@ export default function AdminDashboard({displayName,role,department}:{displayNam
 
   return <div className="app-shell">
     <aside className={`sidebar ${showMobileNav ? "sidebar-open" : ""}`}>
-      <div className="brand"><div className="brand-mark"><Activity size={21} strokeWidth={2.4}/></div><div><strong>Civic<span>AI</span></strong><small>Municipal intelligence</small></div><button className="mobile-close icon-button" onClick={() => setShowMobileNav(false)} aria-label="Close navigation"><X size={19}/></button></div>
+      <div className="brand"><div className="brand-mark"><Activity size={21} strokeWidth={2.4}/></div><div><strong>Jan<span>Setu</span></strong><small>Municipal intelligence</small></div><button className="mobile-close icon-button" onClick={() => setShowMobileNav(false)} aria-label="Close navigation"><X size={19}/></button></div>
       <div className="workspace-label">WORKSPACE</div>
       <nav className="primary-nav">{nav.map(({name, icon: Icon, count}) => <button key={name} className={`nav-item ${active === name ? "active" : ""}`} onClick={() => { navigate(name); setShowMobileNav(false); }}><Icon size={18}/><span>{name}</span>{count && <b>{connected?stats?.needs??"—":count}</b>}</button>)}</nav>
       <div className="sidebar-divider"/><div className="workspace-label">YOUR DEPARTMENT</div>
