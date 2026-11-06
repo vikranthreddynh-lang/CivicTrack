@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ArrowRight, CheckCircle2, ChevronRight, Clock3, FilePlus2, MapPin, ShieldCheck, Sparkles, Trees, Waves } from "lucide-react";
 import { Complaint, ReportModal } from "@/components/admin-dashboard";
 import ResidentHeatmap from "@/components/resident-heatmap";
+import { DEFAULT_RESIDENT_REPORTS } from "@/lib/demo-data";
 import QRCode from "qrcode";
 import "./resident.css";
 import "./confirmation.css";
@@ -20,9 +21,14 @@ export default function ResidentHome() {
   useEffect(() => {
     const id = window.setTimeout(() => {
       try {
-        setRecent(JSON.parse(localStorage.getItem("jansetu-recent") || "[]"));
+        const stored = JSON.parse(localStorage.getItem("jansetu-recent") || "[]");
+        if (Array.isArray(stored) && stored.length > 0) {
+          setRecent(stored);
+        } else {
+          setRecent(DEFAULT_RESIDENT_REPORTS);
+        }
       } catch {
-        setRecent([]);
+        setRecent(DEFAULT_RESIDENT_REPORTS);
       }
     }, 0);
     return () => window.clearTimeout(id);

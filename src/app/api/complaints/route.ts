@@ -28,7 +28,17 @@ export async function POST(request: NextRequest) {
     } else body = await request.json();
   } catch { body = null; }
   const parsed = reportSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Please review the report details and try again.", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+  if (!parsed.success) {
+    const fe = parsed.error.flatten().fieldErrors;
+    const hints: string[] = [];
+    if (fe.title) hints.push("Title must be 4\u2013120 characters");
+    if (fe.description) hints.push("Description must be 8\u20132000 characters");
+    if (fe.address) hints.push("Address must be 3\u2013300 characters");
+    if (fe.category) hints.push("Choose a valid category");
+    if (fe.aiConsent || fe.mediaConsent) hints.push("Consent fields are required");
+    const msg = hints.length ? hints.join(". ") + "." : "Please review the report details and try again.";
+    return NextResponse.json({ error: msg, details: fe }, { status: 400 });
+  }
   const data = parsed.data;
   const supportedTypes=["image/jpeg","image/png","image/webp","video/mp4","audio/webm","audio/mpeg","audio/mp4","audio/wav"];
   if (files.length > 5 || files.some(file => file.size > 10_000_000 || !supportedTypes.includes(file.type.split(";")[0]))) return NextResponse.json({ error: "Choose up to 5 supported files under 10 MB each." }, { status: 400 });

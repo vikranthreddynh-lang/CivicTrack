@@ -10,6 +10,17 @@ export type DemoMapComplaint = {
   ward: string;
 };
 
+export const DEFAULT_RESIDENT_REPORTS = [
+  { id: "JS-A1B2C3D4E5", title: "[DEMO] Large pothole near metro station entrance", category: "Roads", ward: "[DEMO] Central Ward", status: "New", priority: "Medium", time: "10 min ago", address: "[DEMO] 12th Main Rd, Central Ward" },
+  { id: "JS-B2C3D4E5F6", title: "[DEMO] Major potable water pipeline leak", category: "Water", ward: "[DEMO] Central Ward", status: "Assigned", priority: "High", time: "45 min ago", address: "[DEMO] 4th Cross Road, Central Ward" },
+  { id: "JS-C3D4E5F6A1", title: "[DEMO] Faulty streetlights creating dark zone near school", category: "Streetlights", ward: "[DEMO] South Ward", status: "In progress", priority: "Medium", time: "2 hrs ago", address: "[DEMO] School Cross Road, South Ward" },
+  { id: "JS-D4E5F6A1B2", title: "[DEMO] Blocked stormwater drain overflowing onto road", category: "Drainage", ward: "[DEMO] Central Ward", status: "Work completed", priority: "High", time: "5 hrs ago", address: "[DEMO] 80ft Canal Road, Central Ward" },
+  { id: "JS-E5F6A1B2C3", title: "[DEMO] Community garbage dump cleared and sanitized", category: "Sanitation", ward: "[DEMO] East Ward", status: "Verified", priority: "Low", time: "Yesterday", address: "[DEMO] Market Cross, East Ward" },
+  { id: "JS-F6A1B2C3D4", title: "[DEMO] Broken footpath pavers repaired", category: "Roads", ward: "[DEMO] South Ward", status: "Closed", priority: "Low", time: "2 days ago", address: "[DEMO] Commercial Boulevard, South Ward" },
+  { id: "JS-1A2B3C4D5E", title: "[DEMO] Low domestic water pressure during peak hours", category: "Water", ward: "[DEMO] East Ward", status: "Accepted", priority: "Medium", time: "3 days ago", address: "[DEMO] Residential Sector 7, East Ward" },
+  { id: "JS-2B3C4D5E6F", title: "[DEMO] Sparking distribution box adjacent to children playground", category: "Public safety", ward: "[DEMO] Central Ward", status: "In progress", priority: "Critical", time: "Just now", address: "[DEMO] Children Park Perimeter Road, Central Ward" }
+];
+
 export const DEMO_MAP_COMPLAINTS: DemoMapComplaint[] = [
   { complaint_id: "demo-1", title: "[DEMO] Large pothole on main road", category: "Roads", status: "in_progress", priority: "p1", latitude: 12.9732, longitude: 77.5961, created_at: new Date(Date.now() - 1000 * 60 * 12).toISOString(), ward: "[DEMO] Central Ward" },
   { complaint_id: "demo-2", title: "[DEMO] Water leaking from roadside pipe", category: "Water", status: "assigned", priority: "p0", latitude: 12.9741, longitude: 77.5983, created_at: new Date(Date.now() - 1000 * 60 * 38).toISOString(), ward: "[DEMO] Central Ward" },
