@@ -1,0 +1,5 @@
+node_modules
+.next
+data/*.sqlite
+.env.local
+*.tsbuildinfo
