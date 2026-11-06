@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+const schema=z.object({note:z.string().trim().min(2).max(2000)});
+export async function POST(request:Request,context:{params:Promise<{id:string}>}){const{id}=await context.params;const body=schema.safeParse(await request.json().catch(()=>null));if(!body.success)return NextResponse.json({error:"Enter an internal note."},{status:400});const supabase=await createSupabaseServerClient();if(!supabase)return NextResponse.json({error:"Supabase is not configured."},{status:503});const{data:{user}}=await supabase.auth.getUser();if(!user)return NextResponse.json({error:"Sign-in required."},{status:401});const{error}=await supabase.from("complaint_internal_notes").insert({complaint_id:id,author_id:user.id,note:body.data.note});if(error)return NextResponse.json({error:"Could not save the internal note."},{status:403});await supabase.from("audit_logs").insert({actor_id:user.id,action:"complaint.internal_note_added",entity_type:"complaint",entity_id:id});return NextResponse.json({ok:true});}

@@ -1,0 +1,3 @@
+import{redirect}from"next/navigation";import{createSupabaseServerClient}from"@/lib/supabase/server";import WorkerPortal from"@/components/worker-portal";
+export const instant=false;
+export default async function WorkerPage(){const supabase=await createSupabaseServerClient();if(!supabase)redirect("/admin/login");const{data:{user}}=await supabase.auth.getUser();if(!user)redirect("/admin/login");const{data:profile}=await supabase.from("profiles").select("role,display_name").eq("id",user.id).maybeSingle();if(profile?.role!=="field_worker")redirect("/admin");return <WorkerPortal name={profile.display_name||"Field worker"}/>;}

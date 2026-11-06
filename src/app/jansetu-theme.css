@@ -1,0 +1,94 @@
+/* Shared visual language across public, admin, tracking, and field workflows. */
+.resident-page{background:#f4f7f3;color:#163c38}
+.resident-nav,.track-top,.worker-header{background:#fffdfa;border-color:#dce7e2}
+.resident-brand,.track-brand,.worker-brand{color:#163c38}
+.resident-brand>span,.track-brand>span,.worker-brand>span{background:#e8f2e8;color:#167c70}
+.resident-brand small{color:#71827d}
+.resident-nav nav a{color:#647b73}
+.resident-nav nav a:hover,.resident-nav nav .staff-link{color:#167c70}
+.resident-hero{padding-top:51px;padding-bottom:45px;min-height:405px}
+.resident-hero h1{color:#163c38;font-size:clamp(40px,5.3vw,58px);letter-spacing:-2.6px}
+.resident-hero h1 span{color:#167c70}
+.resident-hero-copy>p{color:#647b73;font-size:14px;line-height:1.75}
+.resident-hero-copy .eyebrow{color:#648176}
+.city-illustration{background:linear-gradient(145deg,#eaf1df,#f4f5e8 55%,#dcece6);border:1px solid #dce7d7;border-radius:25px;box-shadow:0 20px 46px #193c3014}
+.sun{background:#f5c86b;box-shadow:0 0 0 13px #f5c86b35}
+.hill-back{background:#d9e6cf}.hill-front{background:#c3dfc9}.building{background:#527d75}.building-a,.building-c{background:#72958b}.city-road{background:#b9c9c2;border-color:#eef2e9}.city-pin{color:#d76f51}
+.resident-steps,.resident-recent,.resident-footer{border-color:#dce7e2}
+.resident-section-heading h2{color:#163c38;font-size:21px}
+.step-card{background:#fffdfa;border-color:#dce7e2;border-radius:15px;padding:19px;box-shadow:0 8px 24px #183d3208}
+.step-top i{background:#e8f2e8;color:#167c70}
+.step-card>b{color:#254b43;font-size:12px}.step-card p{color:#71827d;font-size:11px}
+.saved-list,.no-reports{background:#fffdfa;border-color:#dce7e2;border-radius:13px}
+.saved-row{border-color:#e8efea}.saved-row b{color:#254b43}.saved-row>span{color:#167c70;background:#e8f2e8}
+.track-all{color:#167c70}
+.resident-cta{height:46px;padding-inline:19px;border-radius:10px;font-size:13px}
+.no-account{color:#71827d;font-size:11px}
+.resident-footer{color:#71827d;font-size:10px}
+.modal-kicker{color:#718b79}
+.track-page,.worker-page{background:#f4f7f3;color:#163c38}
+.track-content{padding-top:70px}
+.track-intro h1,.result-head h2,.worker-intro h1{color:#163c38}
+.track-intro p,.track-help,.worker-intro p{color:#71827d}
+.track-icon{background:#e8f2e8;color:#167c70;border-radius:16px}
+.track-search,.track-result,.work-card,.worker-empty{background:#fffdfa;border-color:#dce7e2;border-radius:16px;box-shadow:0 12px 30px #183d320b}
+.track-search input,.detail-actions-grid select,.detail-actions-grid textarea,.work-actions button,.evidence-form button{border-color:#dce7e2}
+.track-search input:focus{border-color:#167c70;box-shadow:0 0 0 3px #167c7019}
+.result-code{color:#167c70}
+.timeline-item:not(:last-child):before{background:#dce7e2}
+.timeline-dot.current{background:#167c70}
+.privacy-note{background:#edf4ed;color:#647b73}
+.track-help a,.work-location a{color:#167c70}
+.worker-header{box-shadow:0 3px 12px #183d3207}
+.worker-content{max-width:1000px;padding-top:42px}
+.work-card{padding:20px;transition:transform .18s ease,box-shadow .18s ease}
+.work-card:hover{transform:translateY(-2px);box-shadow:0 16px 34px #183d3214}
+.work-card h2{color:#254b43;font-size:15px}
+.work-card>p{color:#647b73;font-size:11px}
+.work-actions button,.evidence-form button{border-radius:8px;color:#167c70;background:#f4f8f3}
+.work-actions button:hover,.evidence-form button:hover{background:#e8f2e8}
+.detail-modal{border-radius:18px}
+.login-page{background:radial-gradient(ellipse at 50% 8%,#e4efdc 0%,#f4f7f3 52%)}
+.login-card{border-color:#dce7e2;border-radius:20px;box-shadow:0 22px 55px #183d3214}
+.login-mark{background:#e8f2e8;color:#167c70;border-radius:13px}
+.login-card h1{color:#163c38}.login-card>p,.login-card form label{color:#647b73}
+.login-card input{border-radius:9px;border-color:#dce7e2}.login-card input:focus{border-color:#167c70;box-shadow:0 0 0 3px #167c7019}
+.login-note{background:#edf4ed;color:#647b73;border-radius:9px}
+.detail-actions-grid form{border-radius:10px}
+.toast{border-radius:12px}
+@media(max-width:700px){.resident-hero{padding-top:36px;min-height:0}.resident-hero h1{font-size:41px;letter-spacing:-1.7px}.track-content{padding-top:44px}.worker-content{padding-top:26px}}
+
+/* Scoped specificity keeps this theme in control of the older page-level styles. */
+.resident-page .resident-nav,.track-page .track-top,.worker-page .worker-header{background:#fffdfa;border-color:#dce7e2}
+.resident-page .resident-brand,.track-page .track-brand,.worker-page .worker-brand{color:#163c38}
+.resident-page .resident-brand>span,.track-page .track-brand>span,.worker-page .worker-brand>span{background:#e8f2e8;color:#167c70}
+.resident-page .resident-nav nav a{color:#647b73}.resident-page .resident-nav nav a:hover,.resident-page .resident-nav nav .staff-link{color:#167c70}
+.resident-page .resident-hero{padding-top:51px;padding-bottom:45px;min-height:405px}
+.resident-page .resident-hero h1{color:#163c38;font-size:clamp(40px,5.3vw,58px);letter-spacing:-2.6px}
+.resident-page .resident-hero h1 span{color:#167c70}
+.resident-page .resident-hero-copy>p{color:#647b73;font-size:14px;line-height:1.75}
+.resident-page .city-illustration{background:linear-gradient(145deg,#eaf1df,#f4f5e8 55%,#dcece6);border:1px solid #dce7d7;border-radius:25px;box-shadow:0 20px 46px #193c3014}
+.resident-page .sun{background:#f5c86b;box-shadow:0 0 0 13px #f5c86b35}
+.resident-page .hill-back{background:#d9e6cf}.resident-page .hill-front{background:#c3dfc9}.resident-page .building{background:#527d75}.resident-page .building-a,.resident-page .building-c{background:#72958b}.resident-page .city-road{background:#b9c9c2;border-color:#eef2e9}.resident-page .city-pin{color:#d76f51}
+.resident-page .resident-steps,.resident-page .resident-recent,.resident-page .resident-footer{border-color:#dce7e2}
+.resident-page .resident-section-heading h2{color:#163c38;font-size:21px}
+.resident-page .step-card,.resident-page .saved-list,.resident-page .no-reports{background:#fffdfa;border-color:#dce7e2;border-radius:15px;box-shadow:0 8px 24px #183d3208}
+.resident-page .step-top i{background:#e8f2e8;color:#167c70}
+.resident-page .step-card>b,.resident-page .saved-row b{color:#254b43}
+.resident-page .step-card p,.resident-page .no-account,.resident-page .resident-footer{color:#71827d}
+.resident-page .saved-row>span{color:#167c70;background:#e8f2e8}
+.resident-page .track-all{color:#167c70}
+.resident-page .resident-cta{height:46px;padding-inline:19px;border-radius:10px;font-size:13px}
+.track-page,.worker-page{background:#f4f7f3;color:#163c38}
+.track-page .track-icon{background:#e8f2e8;color:#167c70;border-radius:16px}
+.track-page .track-search,.track-page .track-result,.worker-page .work-card,.worker-page .worker-empty{background:#fffdfa;border-color:#dce7e2;border-radius:16px;box-shadow:0 12px 30px #183d320b}
+.track-page .track-intro h1,.track-page .result-head h2,.worker-page .worker-intro h1{color:#163c38}
+.track-page .track-intro p,.track-page .track-help,.worker-page .worker-intro p,.worker-page .work-card>p{color:#71827d}
+.track-page .result-code{color:#167c70}.track-page .timeline-item:not(:last-child):before{background:#dce7e2}.track-page .timeline-dot.current{background:#167c70}
+.track-page .privacy-note{background:#edf4ed;color:#647b73}.track-page .track-help a,.worker-page .work-location a{color:#167c70}
+.worker-page .worker-header{box-shadow:0 3px 12px #183d3207}.worker-page .worker-content{max-width:1000px;padding-top:42px}
+.worker-page .work-card{padding:20px;transition:transform .18s ease,box-shadow .18s ease}.worker-page .work-card:hover{transform:translateY(-2px);box-shadow:0 16px 34px #183d3214}
+.worker-page .work-card h2{color:#254b43;font-size:15px}.worker-page .work-actions button,.worker-page .evidence-form button{border-radius:8px;border-color:#dce7e2;color:#167c70;background:#f4f8f3}
+.worker-page .work-actions button:hover,.worker-page .evidence-form button:hover{background:#e8f2e8}
+.login-page{background:#f4f7f3}.login-page .login-card{border-color:#dce7e2;border-radius:20px;box-shadow:0 22px 55px #183d3214}
+.login-page .login-mark{background:#e8f2e8;color:#167c70;border-radius:13px}.login-page .login-card h1{color:#163c38}
